@@ -5,6 +5,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 require("dotenv").config();
+require("./config/cloudinary.config");
 
 const authRoutes = require("./routes/auth.routes");
 
