@@ -15,9 +15,10 @@ const signToken = (id) =>
 const sendTokenResponse = (user, statusCode, res) => {
   const token = signToken(user._id);
 
-  // Strip password before sending
-  const userObj = user.toObject();
-  delete userObj.password;
+  // Safely convert to plain object and strip sensitive fields
+  const { password, __v, ...userObj } = user.toObject
+    ? user.toObject()
+    : JSON.parse(JSON.stringify(user));
 
   res.status(statusCode).json({
     success: true,
@@ -57,7 +58,7 @@ exports.register = async (req, res) => {
     sendTokenResponse(user, 201, res);
   } catch (error) {
     console.error("Register error:", error);
-    res.status(500).json({ success: false, message: "Internal server error." });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
