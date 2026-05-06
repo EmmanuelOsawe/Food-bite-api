@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { OAuth2Client } = require("google-auth-library");
 const { User } = require("../models/user.model");
+const { uploadToCloudinary } = require("../middleware/upload.middleware");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -15,7 +16,6 @@ const signToken = (id) =>
 const sendTokenResponse = (user, statusCode, res) => {
   const token = signToken(user._id);
 
-  // Safely convert to plain object and strip sensitive fields
   const { password, __v, ...userObj } = user.toObject
     ? user.toObject()
     : JSON.parse(JSON.stringify(user));
@@ -48,11 +48,19 @@ exports.register = async (req, res) => {
       });
     }
 
+    // Upload avatar to Cloudinary if a file was attached
+    let avatarUrl = null;
+    if (req.file) {
+      const uploaded = await uploadToCloudinary(req.file.buffer);
+      avatarUrl = uploaded.url;
+    }
+
     const user = await User.create({
       name,
       email: email.toLowerCase(),
-      password,                   // hashed in the model pre-save hook
+      password,
       role: role || "customer",
+      avatar: avatarUrl,
     });
 
     sendTokenResponse(user, 201, res);
@@ -75,7 +83,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Explicitly select password (excluded by default in model)
     const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
     if (!user) {
       return res.status(401).json({
@@ -95,12 +102,11 @@ exports.login = async (req, res) => {
     sendTokenResponse(user, 200, res);
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ success: false, message: "Internal server error." });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // ─── GET /api/auth/google ────────────────────────────────────────────────────
-// Expects:  ?token=<google_id_token>   (sent by the frontend after Google sign-in)
 
 exports.googleAuth = async (req, res) => {
   try {
@@ -113,7 +119,6 @@ exports.googleAuth = async (req, res) => {
       });
     }
 
-    // Verify the token with Google
     const ticket = await googleClient.verifyIdToken({
       idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID,
@@ -121,7 +126,6 @@ exports.googleAuth = async (req, res) => {
 
     const { name, email, picture, sub: googleId } = ticket.getPayload();
 
-    // Find or create the user
     let user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
@@ -131,10 +135,9 @@ exports.googleAuth = async (req, res) => {
         googleId,
         avatar: picture,
         role: "customer",
-        password: undefined,      // no password for OAuth users
+        password: undefined,
       });
     } else if (!user.googleId) {
-      // Link Google to an existing email/password account
       user.googleId = googleId;
       if (!user.avatar) user.avatar = picture;
       await user.save({ validateBeforeSave: false });
