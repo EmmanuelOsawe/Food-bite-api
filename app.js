@@ -1,4 +1,5 @@
 const express = require("express");
+const http = require("http");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -7,17 +8,23 @@ const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 require("./config/cloudinary.config");
 
+const { initSocket } = require("./config/socket.config");
 const authRoutes = require("./routes/auth.routes");
+const foodRoutes = require("./routes/food.routes");
+const orderRoutes = require("./routes/order.routes");
+const notificationRoutes = require("./routes/notification.routes");
 
 const app = express();
+const server = http.createServer(app); // wrap express in http server for Socket.IO
 
-// ─── Security & Utility Middleware ───────────────────────────────────────────
+// ─── Initialize Socket.IO ─────────────────────────────────────────────────────
+initSocket(server);
 
-app.use(helmet());                        // sets secure HTTP headers
+// ─── Security & Utility Middleware ────────────────────────────────────────────
+app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_URL || "*" }));
-app.use(morgan("dev"));                   // request logger
+app.use(morgan("dev"));
 
-// Rate limiter – 100 requests per 15 min per IP
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -26,13 +33,14 @@ const limiter = rateLimit({
 app.use("/api", limiter);
 
 // ─── Body Parsers ─────────────────────────────────────────────────────────────
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-
 app.use("/api/auth", authRoutes);
+app.use("/api/foods", foodRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Health check
 app.get("/", (req, res) => {
@@ -54,14 +62,13 @@ app.use((err, req, res, next) => {
 });
 
 // ─── DB + Server ──────────────────────────────────────────────────────────────
-
 const PORT = process.env.PORT || 5000;
 
 mongoose
   .connect(process.env.DB_CONNECT)
   .then(() => {
     console.log("✅ MongoDB connected");
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`)); // use server not app
   })
   .catch((err) => {
     console.error("❌ MongoDB connection failed:", err.message);
