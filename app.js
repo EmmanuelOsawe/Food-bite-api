@@ -13,9 +13,11 @@ const authRoutes = require("./routes/auth.routes");
 const foodRoutes = require("./routes/food.routes");
 const orderRoutes = require("./routes/order.routes");
 const notificationRoutes = require("./routes/notification.routes");
+const reservationRoutes = require("./routes/reservation.routes");
+const reviewRoutes = require("./routes/review.routes");
 
 const app = express();
-const server = http.createServer(app); // wrap express in http server for Socket.IO
+const server = http.createServer(app);
 
 // ─── Initialize Socket.IO ─────────────────────────────────────────────────────
 initSocket(server);
@@ -41,6 +43,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/foods", foodRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/reservations", reservationRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 // Health check
 app.get("/", (req, res) => {
@@ -65,10 +69,10 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 mongoose
-  .connect(process.env.DB_CONNECT)
+  .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB connected");
-    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`)); // use server not app
+    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   })
   .catch((err) => {
     console.error("❌ MongoDB connection failed:", err.message);
