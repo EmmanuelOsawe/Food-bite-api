@@ -6,8 +6,8 @@ const orderItemSchema = new mongoose.Schema({
     ref: "Food",
     required: true,
   },
-  name: String,   // snapshot at order time in case food name changes later
-  price: Number,  // snapshot at order time
+  name: String,
+  price: Number,
   quantity: {
     type: Number,
     required: true,
@@ -32,6 +32,15 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: ["pending", "confirmed", "preparing", "ready", "delivered", "cancelled"],
       default: "pending",
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "paid", "refunded"],
+      default: "unpaid",
+    },
+    paymentReference: {
+      type: String,
+      default: null,
     },
     deliveryAddress: {
       type: String,
