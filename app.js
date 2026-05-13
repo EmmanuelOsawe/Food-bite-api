@@ -15,6 +15,7 @@ const orderRoutes = require("./routes/order.routes");
 const notificationRoutes = require("./routes/notification.routes");
 const reservationRoutes = require("./routes/reservation.routes");
 const reviewRoutes = require("./routes/review.routes");
+const paymentRoutes = require("./routes/payment.routes");
 
 const app = express();
 const server = http.createServer(app);
@@ -24,7 +25,7 @@ initSocket(server);
 
 // ─── Security & Utility Middleware ────────────────────────────────────────────
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || "*" }));
+app.use(cors({ origin: process.env.DB_CONNECT || "*", credentials: true }));
 app.use(morgan("dev"));
 
 const limiter = rateLimit({
@@ -33,6 +34,9 @@ const limiter = rateLimit({
   message: { success: false, message: "Too many requests. Please try again later." },
 });
 app.use("/api", limiter);
+
+// ─── IMPORTANT: Paystack webhook needs raw body — mount BEFORE express.json() ─
+app.use("/api/payments/webhook", express.raw({ type: "application/json" }));
 
 // ─── Body Parsers ─────────────────────────────────────────────────────────────
 app.use(express.json());
@@ -45,6 +49,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reservations", reservationRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // Health check
 app.get("/", (req, res) => {
