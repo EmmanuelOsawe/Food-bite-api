@@ -1,4 +1,5 @@
 const { Reservation } = require("../models/reservation.model");
+const { sendReservationNotification } = require("../config/notifications.config");
 
 // ─── CUSTOMER: Make a reservation ─────────────────────────────────────────────
 // POST /api/reservations
@@ -29,6 +30,16 @@ exports.createReservation = async (req, res) => {
       time,
       guests: Number(guests),
     });
+
+    // Send email + SMS confirmation
+    sendReservationNotification({
+      name: req.user.name,
+      email: req.user.email,
+      phone: req.user.phone || null,
+      date,
+      time,
+      guests,
+    }).catch(console.error);
 
     res.status(201).json({ success: true, reservation });
   } catch (error) {
