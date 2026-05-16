@@ -5,6 +5,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
+const passport = require("./config/passport.config");
 require("dotenv").config();
 require("./config/cloudinary.config");
 
@@ -16,6 +17,7 @@ const notificationRoutes = require("./routes/notification.routes");
 const reservationRoutes = require("./routes/reservation.routes");
 const reviewRoutes = require("./routes/review.routes");
 const paymentRoutes = require("./routes/payment.routes");
+const contactRoutes = require("./routes/contactMessage.routes");
 
 const app = express();
 const server = http.createServer(app);
@@ -28,7 +30,11 @@ app.use(helmet());
 app.use(cors({
   origin: "*",
   credentials: false,
-}));app.use(morgan("dev"));
+}));
+
+
+app.use(morgan("dev"));
+app.use(passport.initialize());
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -52,6 +58,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/reservations", reservationRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/contact", contactRoutes);
 
 // Health check
 app.get("/", (req, res) => {
@@ -76,7 +83,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 mongoose
-  .connect(process.env.DB_CONNECT)
+  .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB connected");
     server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
