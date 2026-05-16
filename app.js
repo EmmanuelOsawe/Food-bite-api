@@ -25,8 +25,10 @@ initSocket(server);
 
 // ─── Security & Utility Middleware ────────────────────────────────────────────
 app.use(helmet());
-app.use(cors({ origin: process.env.DB_CONNECT || "*", credentials: true }));
-app.use(morgan("dev"));
+app.use(cors({
+  origin: "*",
+  credentials: false,
+}));app.use(morgan("dev"));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
