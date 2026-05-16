@@ -1,5 +1,6 @@
 const { Order } = require("../models/order.model");
 const { Food } = require("../models/food.model");
+const { sendOrderNotification } = require("../config/notifications.config");
 
 // ─── CUSTOMER: Place order ────────────────────────────────────────────────────
 // POST /api/orders
@@ -204,6 +205,20 @@ exports.updateOrderStatus = async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ success: false, message: "Order not found." });
+    }
+
+    // Send email + SMS notification to customer
+    const customer = order.customer;
+    if (customer?.email) {
+      sendOrderNotification({
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone || null,
+        orderId: order._id,
+        items: order.items,
+        total: order.totalAmount,
+        status,
+      }).catch(console.error);
     }
 
     res.status(200).json({ success: true, message: `Order status updated to "${status}".`, order });
